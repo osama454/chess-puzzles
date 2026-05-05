@@ -1,0 +1,26 @@
+{
+  "endgame": {
+    "matein1": 171,
+    "matein2": 221,
+    "matein3": 50,
+    "matein4": 7,
+    "matein5": 2,
+    "nomate": 1040
+  },
+  "middlegame": {
+    "matein1": 224,
+    "matein2": 165,
+    "matein3": 45,
+    "matein4": 8,
+    "matein5": 2,
+    "nomate": 899
+  },
+  "opening": {
+    "matein1": 40,
+    "matein2": 9,
+    "matein3": 2,
+    "matein4": 1,
+    "matein5": 1,
+    "nomate": 93
+  }
+}
