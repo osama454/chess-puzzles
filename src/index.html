@@ -1,1 +1,651 @@
-<h1>Hello in Chess Puzzles</h1>
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess Analyzer – Powered by Stockfish 18</title>
+  <meta name="description" content="Analyze your chess games with Stockfish 18. Free offline chess tutor for Android." />
+  <link rel="icon" href="icon.png" type="image/png" />
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ===== TOKENS ===== */
+    :root {
+      --navy:   #0d1b2a;
+      --navy2:  #162034;
+      --navy3:  #1e2d45;
+      --gold:   #c9a84c;
+      --gold2:  #e8c96a;
+      --cream:  #f5f0e8;
+      --white:  #ffffff;
+      --muted:  #8ea4be;
+      --danger: #e05c5c;
+      --radius: 16px;
+      --radius-sm: 8px;
+      --shadow: 0 8px 40px rgba(0,0,0,.45);
+      --transition: .35s cubic-bezier(.4,0,.2,1);
+    }
+
+    /* ===== RESET ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--navy);
+      color: var(--cream);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ===== CHESS BOARD PATTERN ===== */
+    .board-bg {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background-image:
+        repeating-conic-gradient(rgba(255,255,255,.025) 0% 25%, transparent 0% 50%);
+      background-size: 80px 80px;
+      opacity: 1;
+    }
+    .board-bg::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(13,27,42,0) 0%, var(--navy) 75%);
+    }
+
+    /* ===== GLOBAL LAYOUT ===== */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+    /* ===== NAV ===== */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 18px 0;
+      background: rgba(13,27,42,.85);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(201,168,76,.15);
+      transition: var(--transition);
+    }
+    nav .inner {
+      max-width: 1100px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 12px;
+      text-decoration: none; color: inherit;
+    }
+    .nav-brand img { width: 42px; height: 42px; border-radius: 10px; object-fit: contain; }
+    .nav-brand span {
+      font-family: 'Cinzel', serif; font-size: 1.15rem; font-weight: 600;
+      background: linear-gradient(135deg, var(--gold) 0%, var(--gold2) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .lang-toggle {
+      background: rgba(201,168,76,.12);
+      border: 1px solid rgba(201,168,76,.3);
+      color: var(--gold);
+      font-family: 'DM Sans', sans-serif;
+      font-size: .85rem; font-weight: 500;
+      padding: 7px 18px; border-radius: 30px;
+      cursor: pointer; transition: var(--transition);
+      letter-spacing: .04em;
+    }
+    .lang-toggle:hover {
+      background: rgba(201,168,76,.25);
+      border-color: var(--gold);
+    }
+
+    /* ===== HERO ===== */
+    .hero {
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center;
+      padding: 120px 24px 80px;
+      position: relative;
+    }
+    .hero-glow {
+      position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
+      width: 700px; height: 700px;
+      background: radial-gradient(circle, rgba(201,168,76,.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-icon {
+      width: 110px; height: 110px;
+      border-radius: 24px;
+      border: 2px solid rgba(201,168,76,.35);
+      box-shadow: 0 0 60px rgba(201,168,76,.2), var(--shadow);
+      margin-bottom: 32px;
+      animation: floatIcon 5s ease-in-out infinite;
+      object-fit: contain;
+    }
+    @keyframes floatIcon {
+      0%,100% { transform: translateY(0); }
+      50%      { transform: translateY(-12px); }
+    }
+    .hero h1 {
+      font-family: 'Cinzel', serif;
+      font-size: clamp(2.6rem, 6vw, 5rem);
+      font-weight: 900;
+      line-height: 1.08;
+      letter-spacing: -.01em;
+      background: linear-gradient(160deg, var(--white) 20%, var(--gold2) 65%, var(--gold) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 20px;
+      animation: fadeUp .8s ease both;
+    }
+    .hero p.tagline {
+      font-size: clamp(1rem, 2.2vw, 1.25rem);
+      color: var(--muted);
+      max-width: 580px; margin: 0 auto 48px;
+      line-height: 1.65;
+      font-weight: 300;
+      animation: fadeUp .8s .15s ease both;
+    }
+    .hero-cta { animation: fadeUp .8s .3s ease both; display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ===== BUTTONS ===== */
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 12px;
+      background: linear-gradient(135deg, #c9a84c 0%, #e8c96a 60%, #c9a84c 100%);
+      background-size: 200% 200%;
+      color: var(--navy); font-weight: 700; font-size: 1rem;
+      padding: 16px 32px; border-radius: var(--radius);
+      text-decoration: none; border: none; cursor: pointer;
+      box-shadow: 0 4px 24px rgba(201,168,76,.4);
+      transition: var(--transition);
+      animation: goldShimmer 3s ease infinite;
+    }
+    @keyframes goldShimmer {
+      0%,100% { background-position: 0% 50%; }
+      50%      { background-position: 100% 50%; }
+    }
+    .btn-primary:hover { transform: translateY(-3px); box-shadow: 0 8px 36px rgba(201,168,76,.55); }
+    .btn-primary svg { width: 22px; height: 22px; flex-shrink: 0; }
+
+    .btn-secondary {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: transparent;
+      border: 1.5px solid rgba(201,168,76,.4);
+      color: var(--gold);
+      font-weight: 500; font-size: .95rem;
+      padding: 15px 28px; border-radius: var(--radius);
+      text-decoration: none; cursor: pointer;
+      transition: var(--transition);
+    }
+    .btn-secondary:hover { border-color: var(--gold); background: rgba(201,168,76,.08); transform: translateY(-2px); }
+
+    /* ===== BADGES ROW ===== */
+    .badges {
+      display: flex; justify-content: center; flex-wrap: wrap; gap: 16px;
+      margin-top: 64px;
+      animation: fadeUp .8s .45s ease both;
+    }
+    .badge {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      padding: 10px 20px; border-radius: 50px;
+      font-size: .82rem; color: var(--muted);
+    }
+    .badge .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+
+    /* ===== DIVIDER ===== */
+    .divider {
+      width: 60px; height: 3px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 0 auto 40px;
+      border-radius: 2px;
+    }
+
+    /* ===== SECTION TITLE ===== */
+    .section-title {
+      font-family: 'Cinzel', serif; font-size: clamp(1.5rem, 3vw, 2.2rem);
+      font-weight: 700; text-align: center; margin-bottom: 12px;
+      color: var(--white);
+    }
+    .section-sub {
+      text-align: center; color: var(--muted);
+      font-size: .95rem; margin-bottom: 60px;
+      max-width: 520px; margin-left: auto; margin-right: auto;
+    }
+
+    /* ===== FEATURES ===== */
+    #features { padding: 100px 0; }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+    }
+    .feature-card {
+      background: var(--navy2);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: var(--radius);
+      padding: 36px 32px;
+      transition: var(--transition);
+      position: relative; overflow: hidden;
+    }
+    .feature-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      opacity: 0; transition: var(--transition);
+    }
+    .feature-card:hover { transform: translateY(-6px); border-color: rgba(201,168,76,.2); box-shadow: var(--shadow); }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-icon {
+      font-size: 2rem; margin-bottom: 20px;
+      width: 56px; height: 56px;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(201,168,76,.1); border-radius: var(--radius-sm);
+    }
+    .feature-card h3 {
+      font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 600;
+      margin-bottom: 10px; color: var(--gold2);
+    }
+    .feature-card p { font-size: .88rem; color: var(--muted); line-height: 1.7; }
+
+    /* ===== SCREENSHOTS ===== */
+    #screenshots { padding: 80px 0; }
+    .screenshots-track {
+      display: flex; gap: 20px; overflow-x: auto; padding-bottom: 16px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+    }
+    .screenshots-track::-webkit-scrollbar { height: 4px; }
+    .screenshots-track::-webkit-scrollbar-track { background: var(--navy2); border-radius: 2px; }
+    .screenshots-track::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; }
+    .screenshot-img {
+      flex-shrink: 0; width: 220px; height: 390px;
+      object-fit: cover;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255,255,255,.08);
+      scroll-snap-align: start;
+      transition: var(--transition);
+    }
+    .screenshot-img:hover { transform: scale(1.03); border-color: rgba(201,168,76,.3); }
+
+    /* ===== COMMUNITY ===== */
+    #community { padding: 100px 0; }
+    .community-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    @media(max-width: 640px) { .community-grid { grid-template-columns: 1fr; } }
+    .community-card {
+      background: var(--navy2);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: var(--radius);
+      padding: 40px 36px;
+      text-align: center;
+      transition: var(--transition);
+    }
+    .community-card:hover { transform: translateY(-4px); border-color: rgba(201,168,76,.2); box-shadow: var(--shadow); }
+    .community-icon { font-size: 2.8rem; margin-bottom: 20px; }
+    .community-card h3 { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--white); margin-bottom: 10px; }
+    .community-card p { font-size: .88rem; color: var(--muted); line-height: 1.7; margin-bottom: 28px; }
+    .community-card a.link-btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(201,168,76,.1); border: 1px solid rgba(201,168,76,.3);
+      color: var(--gold); font-size: .88rem; font-weight: 500;
+      padding: 10px 22px; border-radius: 50px;
+      text-decoration: none; transition: var(--transition);
+    }
+    .community-card a.link-btn:hover { background: rgba(201,168,76,.22); border-color: var(--gold); }
+
+    /* ===== DOWNLOAD CTA ===== */
+    #download {
+      padding: 100px 0;
+      text-align: center;
+    }
+    .cta-box {
+      background: var(--navy2);
+      border: 1px solid rgba(201,168,76,.2);
+      border-radius: 24px;
+      padding: 72px 48px;
+      position: relative; overflow: hidden;
+      max-width: 720px; margin: 0 auto;
+    }
+    .cta-box::before {
+      content: ''; position: absolute;
+      top: -120px; left: 50%; transform: translateX(-50%);
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(201,168,76,.1) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .cta-box h2 { font-family: 'Cinzel', serif; font-size: clamp(1.6rem, 3.5vw, 2.4rem); margin-bottom: 16px; color: var(--white); }
+    .cta-box p  { color: var(--muted); font-size: 1rem; margin-bottom: 40px; line-height: 1.65; }
+
+    /* ===== FOOTER ===== */
+    footer {
+      background: rgba(0,0,0,.3);
+      border-top: 1px solid rgba(255,255,255,.06);
+      text-align: center;
+      padding: 36px 24px;
+      color: var(--muted);
+      font-size: .82rem;
+    }
+    footer a { color: var(--gold); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* ===== RTL ARABIC ===== */
+    [lang="ar"] body, html[lang="ar"] { font-family: 'DM Sans', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    html[dir="rtl"] .nav-brand { flex-direction: row-reverse; }
+
+    /* ===== RESPONSIVE ===== */
+    @media(max-width: 768px) {
+      .cta-box { padding: 48px 28px; }
+      .hero { padding-top: 100px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Chess board subtle background -->
+<div class="board-bg"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="inner">
+    <a class="nav-brand" href="#">
+      <img src="icon.png" alt="Chess Analyzer Logo" onerror="this.style.display='none'" />
+      <span data-i18n="appName">Chess Analyzer</span>
+    </a>
+    <button class="lang-toggle" id="langToggle" onclick="toggleLang()">عربي</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div>
+    <img src="icon.png" class="hero-icon" alt="Chess Analyzer Icon" onerror="this.style.background='rgba(201,168,76,.1)'" />
+    <h1 data-i18n="heroTitle">Chess Analyzer</h1>
+    <p class="tagline" data-i18n="heroSubtitle">
+      Master your game with Stockfish 18 — the world's strongest chess engine. Analyze, learn, and improve. Completely offline. Completely free.
+    </p>
+    <div class="hero-cta">
+      <a id="downloadBtn" href="#" class="btn-primary" onclick="handleDownload(event)">
+        <!-- Google Play Icon -->
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3.18 23.76A1.75 1.75 0 0 1 2 22.13V1.87C2 1.2 2.46.6 3.18.24L13.63 12 3.18 23.76zm18.07-10.44-2.98 1.72-3.08-3.08 3.08-3.08 3 1.74a1.75 1.75 0 0 1-.02 2.7zM4.59 23.34l9.33-9.34 2.51 2.51L5.7 23.96c-.39.2-.82.18-1.11-.62zM4.59.66C4.88-.14 5.31-.16 5.7.04l10.73 6.45-2.51 2.51L4.59.66z"/>
+        </svg>
+        <span data-i18n="downloadBtn">Get it on Google Play</span>
+      </a>
+      <a href="https://www.facebook.com/profile.php?id=61571983418755" target="_blank" class="btn-secondary">
+        <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.41 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.95.93-1.95 1.88v2.27h3.32l-.53 3.49h-2.79V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
+        <span data-i18n="followFb">Follow us on Facebook</span>
+      </a>
+    </div>
+
+    <!-- Badges -->
+    <div class="badges">
+      <div class="badge"><span class="dot"></span><span data-i18n="badge1">Stockfish 18 Engine</span></div>
+      <div class="badge"><span class="dot"></span><span data-i18n="badge2">100% Offline</span></div>
+      <div class="badge"><span class="dot"></span><span data-i18n="badge3">Free Forever</span></div>
+      <div class="badge"><span class="dot"></span><span data-i18n="badge4">Chess960 Support</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="container">
+    <p class="section-title" data-i18n="featuresTitle">Everything You Need to Improve</p>
+    <div class="divider"></div>
+    <p class="section-sub" data-i18n="featuresSub">Powerful tools to analyze every game, find mistakes, and study better moves — all without internet.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">♟️</div>
+        <h3 data-i18n="f1Title">Stockfish 18 Analysis</h3>
+        <p data-i18n="f1Desc">Get evaluations and move recommendations from one of the strongest chess engines ever built.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📂</div>
+        <h3 data-i18n="f2Title">PGN File Import</h3>
+        <p data-i18n="f2Desc">Load and analyze games from PGN files with ease. Study your tournament games or classic master games.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🌐</div>
+        <h3 data-i18n="f3Title">Chess.com Integration</h3>
+        <p data-i18n="f3Desc">Import games directly from your Chess.com profile and analyze them instantly.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎲</div>
+        <h3 data-i18n="f4Title">Chess960 / Fischer Random</h3>
+        <p data-i18n="f4Desc">Full support for Chess960 positions — analyze Fischer Random games with full engine power.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📖</div>
+        <h3 data-i18n="f5Title">Opening Book Arrows</h3>
+        <p data-i18n="f5Desc">See all book moves displayed with arrows on the board to improve your opening preparation.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📴</div>
+        <h3 data-i18n="f6Title">Fully Offline</h3>
+        <p data-i18n="f6Desc">Everything works without internet. No connection needed. Your games stay private on your device.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCREENSHOTS -->
+<section id="screenshots">
+  <div class="container">
+    <p class="section-title" data-i18n="screensTitle">See It in Action</p>
+    <div class="divider"></div>
+    <div class="screenshots-track">
+      <img class="screenshot-img" src="https://play-lh.googleusercontent.com/bP2Vx6RbWT-3tlkk-PPFpn6VKqWBLG33EhFzZBF1K2K58CrNaSf_nJynotpyvHId6DaaLfYbYZilnMAXoMh17w=w526-h296" alt="Screenshot 1" loading="lazy" />
+      <img class="screenshot-img" src="https://play-lh.googleusercontent.com/fW1TOVmjU5q8okJQJRc8hfupmbdLB0gCzOmBwDPFW_g-b0uPO6SsJD72KWZOpzLETJYdHP6ye9Pive5oYA0pbw=w526-h296" alt="Screenshot 2" loading="lazy" />
+      <img class="screenshot-img" src="https://play-lh.googleusercontent.com/LXh4XYw5BMGa1qqUy3xDmWDgEN9oLG2vk-n9fyJXm4pe1gY6PniFiOhT88mFfYGvNPXqvVZXISJnHNeWKjbQ=w526-h296" alt="Screenshot 3" loading="lazy" />
+      <img class="screenshot-img" src="https://play-lh.googleusercontent.com/FEb791DCBB4Drla7oGnArz_Ghgppm7cKM37BUyYSOYTgC4R3eTbm0j-wh22Zp2jiAl1vPIGiMCTO_MA4SX-jkA=w526-h296" alt="Screenshot 4" loading="lazy" />
+      <img class="screenshot-img" src="https://play-lh.googleusercontent.com/-mi9jhUH9ZEwy-D-tDY3yqR5DBlcBlaOEXcFVSXIbKgLlBc833HMci13iXIKGzByc6vvHVDEq_VHTSckbN92=w526-h296" alt="Screenshot 5" loading="lazy" />
+      <img class="screenshot-img" src="https://play-lh.googleusercontent.com/EELv3xmTii9oG1jno5Eo84Vx5qXDB8MGBV-xPKvjzT4CkzH7b07gCbArgGAQEB1YE2mJKY-_eQHwSTJXXdh-xA=w526-h296" alt="Screenshot 6" loading="lazy" />
+    </div>
+  </div>
+</section>
+
+<!-- COMMUNITY -->
+<section id="community">
+  <div class="container">
+    <p class="section-title" data-i18n="communityTitle">Join Our Community</p>
+    <div class="divider"></div>
+    <p class="section-sub" data-i18n="communitySub">Your feedback shapes the future of Chess Analyzer. Share suggestions, report issues, and connect with other chess enthusiasts.</p>
+    <div class="community-grid">
+      <div class="community-card">
+        <div class="community-icon">📘</div>
+        <h3 data-i18n="fbTitle">Follow on Facebook</h3>
+        <p data-i18n="fbDesc">Stay up to date with new features and announcements. Leave your suggestions and ideas on our Facebook page — we read every comment!</p>
+        <a href="https://www.facebook.com/profile.php?id=61571983418755" target="_blank" class="link-btn">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.07C24 5.41 18.63 0 12 0S0 5.41 0 12.07C0 18.1 4.39 23.1 10.13 24v-8.44H7.08v-3.49h3.04V9.41c0-3.02 1.8-4.7 4.54-4.7 1.31 0 2.68.24 2.68.24v2.97h-1.51c-1.49 0-1.95.93-1.95 1.88v2.27h3.32l-.53 3.49h-2.79V24C19.61 23.1 24 18.1 24 12.07z"/></svg>
+          <span data-i18n="fbBtn">Visit our Facebook</span>
+        </a>
+      </div>
+      <div class="community-card">
+        <div class="community-icon">✉️</div>
+        <h3 data-i18n="emailTitle">Email Us</h3>
+        <p data-i18n="emailDesc">Have a detailed suggestion or found a bug? Send us an email and we'll get back to you as soon as possible.</p>
+        <a href="mailto:osama.adel7358@gmail.com" class="link-btn">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          <span data-i18n="emailBtn">osama.adel7358@gmail.com</span>
+        </a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DOWNLOAD CTA -->
+<section id="download">
+  <div class="container">
+    <div class="cta-box">
+      <h2 data-i18n="ctaTitle">Ready to Level Up Your Chess?</h2>
+      <p data-i18n="ctaDesc">Download Chess Analyzer now and start reviewing your games with the power of Stockfish 18 — completely free, no internet needed.</p>
+      <a id="downloadBtn2" href="#" class="btn-primary" onclick="handleDownload(event)" style="margin: 0 auto;">
+        <svg viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3.18 23.76A1.75 1.75 0 0 1 2 22.13V1.87C2 1.2 2.46.6 3.18.24L13.63 12 3.18 23.76zm18.07-10.44-2.98 1.72-3.08-3.08 3.08-3.08 3 1.74a1.75 1.75 0 0 1-.02 2.7zM4.59 23.34l9.33-9.34 2.51 2.51L5.7 23.96c-.39.2-.82.18-1.11-.62zM4.59.66C4.88-.14 5.31-.16 5.7.04l10.73 6.45-2.51 2.51L4.59.66z"/>
+        </svg>
+        <span data-i18n="downloadBtn">Get it on Google Play</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <p>
+    &copy; <span id="year"></span> Chess Analyzer &mdash; 
+    <span data-i18n="footerBy">by</span> Osama Adel Elnahas &nbsp;|&nbsp;
+    <a href="mailto:osama.adel7358@gmail.com">osama.adel7358@gmail.com</a> &nbsp;|&nbsp;
+    <a href="https://www.facebook.com/profile.php?id=61571983418755" target="_blank" data-i18n="footerFb">Facebook</a>
+  </p>
+</footer>
+
+<script>
+  // Year
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  // ===== TRANSLATIONS =====
+  const translations = {
+    en: {
+      appName:       'Chess Analyzer',
+      heroTitle:     'Chess Analyzer',
+      heroSubtitle:  'Master your game with Stockfish 18 — the world\'s strongest chess engine. Analyze, learn, and improve. Completely offline. Completely free.',
+      downloadBtn:   'Get it on Google Play',
+      followFb:      'Follow us on Facebook',
+      badge1:        'Stockfish 18 Engine',
+      badge2:        '100% Offline',
+      badge3:        'Free Forever',
+      badge4:        'Chess960 Support',
+      featuresTitle: 'Everything You Need to Improve',
+      featuresSub:   'Powerful tools to analyze every game, find mistakes, and study better moves — all without internet.',
+      f1Title:       'Stockfish 18 Analysis',
+      f1Desc:        'Get evaluations and move recommendations from one of the strongest chess engines ever built.',
+      f2Title:       'PGN File Import',
+      f2Desc:        'Load and analyze games from PGN files with ease. Study your tournament games or classic master games.',
+      f3Title:       'Chess.com Integration',
+      f3Desc:        'Import games directly from your Chess.com profile and analyze them instantly.',
+      f4Title:       'Chess960 / Fischer Random',
+      f4Desc:        'Full support for Chess960 positions — analyze Fischer Random games with full engine power.',
+      f5Title:       'Opening Book Arrows',
+      f5Desc:        'See all book moves displayed with arrows on the board to improve your opening preparation.',
+      f6Title:       'Fully Offline',
+      f6Desc:        'Everything works without internet. No connection needed. Your games stay private on your device.',
+      screensTitle:  'See It in Action',
+      communityTitle:'Join Our Community',
+      communitySub:  'Your feedback shapes the future of Chess Analyzer. Share suggestions, report issues, and connect with other chess enthusiasts.',
+      fbTitle:       'Follow on Facebook',
+      fbDesc:        'Stay up to date with new features and announcements. Leave your suggestions and ideas on our Facebook page — we read every comment!',
+      fbBtn:         'Visit our Facebook',
+      emailTitle:    'Email Us',
+      emailDesc:     'Have a detailed suggestion or found a bug? Send us an email and we\'ll get back to you as soon as possible.',
+      emailBtn:      'osama.adel7358@gmail.com',
+      ctaTitle:      'Ready to Level Up Your Chess?',
+      ctaDesc:       'Download Chess Analyzer now and start reviewing your games with the power of Stockfish 18 — completely free, no internet needed.',
+      footerBy:      'by',
+      footerFb:      'Facebook',
+    },
+    ar: {
+      appName:       'محلل الشطرنج',
+      heroTitle:     'محلل الشطرنج',
+      heroSubtitle:  'طوّر لعبتك مع محرك ستوكفيش 18 — أحد أقوى محركات الشطرنج في العالم. حلّل، تعلّم، وتحسّن. بدون إنترنت تمامًا. مجاني تمامًا.',
+      downloadBtn:   'حمّل من Google Play',
+      followFb:      'تابعنا على فيسبوك',
+      badge1:        'محرك ستوكفيش 18',
+      badge2:        '100% بدون إنترنت',
+      badge3:        'مجاني للأبد',
+      badge4:        'دعم Chess960',
+      featuresTitle: 'كل ما تحتاجه للتحسّن',
+      featuresSub:   'أدوات قوية لتحليل كل مباراة، واكتشاف الأخطاء، ودراسة الحركات الأفضل — كل ذلك بدون إنترنت.',
+      f1Title:       'تحليل ستوكفيش 18',
+      f1Desc:        'احصل على تقييمات وتوصيات الحركات من أحد أقوى محركات الشطرنج على الإطلاق.',
+      f2Title:       'استيراد ملفات PGN',
+      f2Desc:        'قم بتحميل وتحليل الألعاب من ملفات PGN بسهولة. ادرس مبارياتك التنافسية أو الألعاب الكلاسيكية.',
+      f3Title:       'تكامل مع Chess.com',
+      f3Desc:        'استورد ألعابك مباشرةً من حسابك على Chess.com وحللها فورًا.',
+      f4Title:       'Chess960 / فيشر راندوم',
+      f4Desc:        'دعم كامل لمواضع Chess960 — حلّل ألعاب فيشر راندوم بكامل قوة المحرك.',
+      f5Title:       'أسهم كتاب الافتتاحيات',
+      f5Desc:        'شاهد جميع الحركات الكتابية معروضة بالأسهم على اللوحة لتطوير إعدادك في الافتتاحيات.',
+      f6Title:       'يعمل بالكامل بدون إنترنت',
+      f6Desc:        'كل شيء يعمل بدون اتصال بالإنترنت. ألعابك تبقى خاصة على جهازك.',
+      screensTitle:  'شاهده في العمل',
+      communityTitle:'انضم إلى مجتمعنا',
+      communitySub:  'ملاحظاتك تُشكّل مستقبل محلل الشطرنج. شارك اقتراحاتك، وأبلغ عن المشكلات، وتواصل مع عشاق الشطرنج.',
+      fbTitle:       'تابعنا على فيسبوك',
+      fbDesc:        'تابع آخر الميزات والإعلانات. اترك اقتراحاتك وأفكارك على صفحتنا على فيسبوك — نقرأ كل تعليق!',
+      fbBtn:         'زيارة صفحتنا على فيسبوك',
+      emailTitle:    'راسلنا عبر البريد الإلكتروني',
+      emailDesc:     'هل لديك اقتراح مفصّل أو اكتشفت خللًا؟ أرسل لنا بريدًا إلكترونيًا وسنرد في أقرب وقت.',
+      emailBtn:      'osama.adel7358@gmail.com',
+      ctaTitle:      'هل أنت مستعد للارتقاء بلعبتك؟',
+      ctaDesc:       'حمّل محلل الشطرنج الآن وابدأ بمراجعة مبارياتك بقوة ستوكفيش 18 — مجانًا تمامًا، بدون إنترنت.',
+      footerBy:      'من تطوير',
+      footerFb:      'فيسبوك',
+    }
+  };
+
+  // ===== DETECT DEFAULT LANGUAGE =====
+  function getDefaultLang() {
+    const browserLang = navigator.language || navigator.userLanguage || '';
+    return browserLang.toLowerCase().startsWith('ar') ? 'ar' : 'en';
+  }
+
+  let currentLang = getDefaultLang();
+
+  function applyLang(lang) {
+    currentLang = lang;
+    const t = translations[lang];
+    const isAr = lang === 'ar';
+
+    // Update HTML dir & lang
+    document.documentElement.lang = lang;
+    document.documentElement.dir = isAr ? 'rtl' : 'ltr';
+
+    // Toggle button label
+    document.getElementById('langToggle').textContent = isAr ? 'EN' : 'عربي';
+
+    // Update all data-i18n elements
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const key = el.getAttribute('data-i18n');
+      if (t[key]) el.textContent = t[key];
+    });
+
+    // Update page title
+    document.title = isAr ? 'محلل الشطرنج – مدعوم بستوكفيش 18' : 'Chess Analyzer – Powered by Stockfish 18';
+  }
+
+  function toggleLang() {
+    applyLang(currentLang === 'en' ? 'ar' : 'en');
+  }
+
+  // ===== GOOGLE PLAY DOWNLOAD =====
+  function handleDownload(e) {
+    e.preventDefault();
+    const playUrl = 'https://play.google.com/store/apps/details?id=com.osamtek.chess';
+    // Try to open the Play Store app on Android; fallback to browser
+    const intent = 'intent://details?id=com.osamtek.chess#Intent;scheme=market;package=com.android.vending;end';
+    const ua = navigator.userAgent.toLowerCase();
+    if (/android/.test(ua)) {
+      // Try intent first (opens Play Store app if installed)
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      try { iframe.src = intent; } catch(err) {}
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        window.location.href = playUrl;
+      }, 1500);
+    } else {
+      window.open(playUrl, '_blank');
+    }
+  }
+
+  // ===== INIT =====
+  applyLang(currentLang);
+</script>
+</body>
+</html>
